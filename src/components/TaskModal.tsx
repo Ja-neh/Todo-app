@@ -16,7 +16,6 @@ export default function TaskModal({ isOpen, onClose, onSave, task, existingTopic
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [topic, setTopic] = useState('');
-  const [customTopic, setCustomTopic] = useState('');
   const [status, setStatus] = useState<TaskStatus>('Todo');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,12 +30,10 @@ export default function TaskModal({ isOpen, onClose, onSave, task, existingTopic
     } else {
       setTitle('');
       setDescription('');
-      // Default due date to today
       setDueDate(new Date().toISOString().split('T')[0]);
-      setTopic(existingTopics.length > 0 ? existingTopics[0] : '');
+      setTopic('');
       setStatus('Todo');
     }
-    setCustomTopic('');
     setError(null);
   }, [task, isOpen, existingTopics]);
 
@@ -53,9 +50,9 @@ export default function TaskModal({ isOpen, onClose, onSave, task, existingTopic
       return;
     }
 
-    const finalTopic = topic === '__new__' ? customTopic.trim() : topic.trim();
+    const finalTopic = topic.trim();
     if (!finalTopic) {
-      setError('Please provide a topic.');
+      setError('Please provide a topic / category.');
       return;
     }
 
@@ -63,15 +60,27 @@ export default function TaskModal({ isOpen, onClose, onSave, task, existingTopic
       setIsSubmitting(true);
       setError(null);
 
-      const payload = {
-        title: title.trim(),
-        description: description.trim(),
-        dueDate,
-        topic: finalTopic,
-        status,
-      };
+      if (task) {
+        // Edit mode: status cannot be updated (UpdateTaskInput excludes status)
+        const updatePayload: UpdateTaskInput = {
+          title: title.trim(),
+          description: description.trim(),
+          dueDate,
+          topic: finalTopic,
+        };
+        await onSave(updatePayload, true);
+      } else {
+        // Create mode: CreateTaskInput
+        const createPayload: CreateTaskInput = {
+          title: title.trim(),
+          description: description.trim(),
+          dueDate,
+          topic: finalTopic,
+          status,
+        };
+        await onSave(createPayload, false);
+      }
 
-      await onSave(payload, Boolean(task));
       onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to save task.');
@@ -120,18 +129,46 @@ export default function TaskModal({ isOpen, onClose, onSave, task, existingTopic
           </div>
 
           <div className="form-row">
+            {/* Topic / Category Input with Suggestions */}
             <div className="form-group">
               <label className="form-label">Topic / Category *</label>
-              <select
+              <input
+                type="text"
+                list="modal-existing-topics"
                 className="form-control"
+                placeholder="Type new or pick existing..."
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-              >
+              />
+              <datalist id="modal-existing-topics">
                 {existingTopics.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t} />
                 ))}
-                <option value="__new__">+ Create New Topic</option>
-              </select>
+              </datalist>
+
+              {existingTopics.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.5rem' }}>
+                  {existingTopics.slice(0, 5).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTopic(t)}
+                      style={{
+                        background: topic === t ? 'var(--accent-primary)' : 'rgba(255,255,255,0.06)',
+                        color: topic === t ? '#fff' : 'var(--text-secondary)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '12px',
+                        padding: '0.15rem 0.55rem',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="form-group">
@@ -145,30 +182,28 @@ export default function TaskModal({ isOpen, onClose, onSave, task, existingTopic
             </div>
           </div>
 
-          {topic === '__new__' && (
-            <div className="form-group">
-              <label className="form-label">New Topic Name *</label>
+          {/* Status Field: Selectable on create, fixed/read-only on edit */}
+          <div className="form-group">
+            <label className="form-label">Status {task ? '(Fixed)' : ''}</label>
+            {task ? (
               <input
                 type="text"
                 className="form-control"
-                placeholder="e.g. University, Project, Personal"
-                value={customTopic}
-                onChange={(e) => setCustomTopic(e.target.value)}
+                value={task.status}
+                disabled
+                style={{ opacity: 0.7, cursor: 'not-allowed' }}
               />
-            </div>
-          )}
-
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              className="form-control"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as TaskStatus)}
-            >
-              <option value="Todo">Todo</option>
-              <option value="In-Progress">In-Progress</option>
-              <option value="Complete">Complete</option>
-            </select>
+            ) : (
+              <select
+                className="form-control"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as TaskStatus)}
+              >
+                <option value="Todo">Todo</option>
+                <option value="In-Progress">In-Progress</option>
+                <option value="Complete">Complete</option>
+              </select>
+            )}
           </div>
 
           <div className="modal-footer">

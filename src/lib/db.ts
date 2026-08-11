@@ -132,15 +132,14 @@ export function updateTask(id: number, input: UpdateTaskInput): Task {
   const description = input.description !== undefined ? input.description : existing.description;
   const dueDate = input.dueDate !== undefined ? input.dueDate : existing.dueDate;
   const topic = input.topic !== undefined ? input.topic : existing.topic;
-  const status = input.status !== undefined ? input.status : existing.status;
 
   const stmt = db.prepare(`
     UPDATE tasks
-    SET title = ?, description = ?, dueDate = ?, topic = ?, status = ?, updatedAt = datetime('now')
+    SET title = ?, description = ?, dueDate = ?, topic = ?, updatedAt = datetime('now')
     WHERE id = ?
   `);
 
-  stmt.run(title, description, dueDate, topic, status, id);
+  stmt.run(title, description, dueDate, topic, id);
   const updated = getTaskById(id);
   if (!updated) {
     throw new Error('Failed to retrieve updated task');

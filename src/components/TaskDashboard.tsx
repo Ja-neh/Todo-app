@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { Task, TaskStatus, CreateTaskInput, UpdateTaskInput } from '@/lib/types';
+import { useState } from 'react';
+import { Task, CreateTaskInput, UpdateTaskInput } from '@/lib/types';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
 import { createTaskAction, updateTaskAction, archiveTaskAction } from '@/app/actions';
@@ -15,25 +15,25 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [topics, setTopics] = useState<string[]>(initialTopics);
   
-  // Filters & Sorting state
+  // View tab: Active vs Archived
   const [viewTab, setViewTab] = useState<'active' | 'archived'>('active');
-  const [selectedTopic, setSelectedTopic] = useState<string>('All');
-  const [selectedStatus, setSelectedStatus] = useState<string>('All');
-  const [sortBy, setSortBy] = useState<'dueDate' | 'topic' | 'status' | 'createdAt'>('dueDate');
+
+  // Due Date filtering & sorting
+  const [selectedDate, setSelectedDate] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-
-  const [, startTransition] = useTransition();
 
   // Handle Save (Create / Edit)
   const handleSaveTask = async (input: CreateTaskInput | UpdateTaskInput, isEdit: boolean) => {
     if (isEdit && editingTask) {
       const updated = await updateTaskAction(editingTask.id, input);
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      if (updated.topic && !topics.includes(updated.topic)) {
+        setTopics((prev) => [...prev, updated.topic].sort());
+      }
     } else {
       const created = await createTaskAction(input as CreateTaskInput);
       setTasks((prev) => [created, ...prev]);
@@ -43,68 +43,30 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
     }
   };
 
-  // Handle Quick Status Change
-  const handleStatusChange = (id: number, newStatus: TaskStatus) => {
-    // Optimistic UI update
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: newStatus, updatedAt: new Date().toISOString() } : t))
-    );
-    startTransition(async () => {
-      await updateTaskAction(id, { status: newStatus });
-    });
-  };
-
   // Handle Archive Action (Tasks are never deleted, only archived)
-  const handleArchiveTask = (id: number) => {
-    // Optimistic UI update
+  const handleArchiveTask = async (id: number) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, archived: true } : t))
     );
-    startTransition(async () => {
-      await archiveTaskAction(id);
-    });
+    await archiveTaskAction(id);
   };
 
-  // Filter Tasks
-  const filteredTasks = tasks.filter((t) => {
-    // Tab filter
-    if (viewTab === 'active' && t.archived) return false;
-    if (viewTab === 'archived' && !t.archived) return false;
+  // Filter and Sort by Due Date
+  const displayedTasks = tasks
+    .filter((t) => {
+      // Tab filter
+      if (viewTab === 'active' && t.archived) return false;
+      if (viewTab === 'archived' && !t.archived) return false;
 
-    // Topic filter
-    if (selectedTopic !== 'All' && t.topic !== selectedTopic) return false;
+      // Filter by specific selected date
+      if (selectedDate && t.dueDate !== selectedDate) return false;
 
-    // Status filter
-    if (selectedStatus !== 'All' && t.status !== selectedStatus) return false;
-
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = t.title.toLowerCase().includes(q);
-      const matchDesc = t.description?.toLowerCase().includes(q);
-      const matchTopic = t.topic.toLowerCase().includes(q);
-      if (!matchTitle && !matchDesc && !matchTopic) return false;
-    }
-
-    return true;
-  });
-
-  // Sort Tasks
-  const sortedTasks = [...filteredTasks].sort((a, b) => {
-    let comparison = 0;
-    if (sortBy === 'dueDate') {
-      comparison = a.dueDate.localeCompare(b.dueDate);
-    } else if (sortBy === 'topic') {
-      comparison = a.topic.localeCompare(b.topic);
-    } else if (sortBy === 'status') {
-      const statusOrder: Record<TaskStatus, number> = { 'Todo': 1, 'In-Progress': 2, 'Complete': 3 };
-      comparison = statusOrder[a.status] - statusOrder[b.status];
-    } else if (sortBy === 'createdAt') {
-      comparison = a.createdAt.localeCompare(b.createdAt);
-    }
-
-    return sortOrder === 'asc' ? comparison : -comparison;
-  });
+      return true;
+    })
+    .sort((a, b) => {
+      const comparison = a.dueDate.localeCompare(b.dueDate);
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
   const activeCount = tasks.filter((t) => !t.archived).length;
   const archivedCount = tasks.filter((t) => t.archived).length;
@@ -134,96 +96,68 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
         </button>
       </header>
 
-      {/* Control Bar: View Tabs, Filters, Sort */}
+      {/* Control Bar: View Tabs & Due Date Controls */}
       <div className="controls-bar">
-        <div className="filter-group">
-          {/* Active vs Archived View Tabs */}
-          <div className="tabs">
-            <button
-              className={`tab-btn ${viewTab === 'active' ? 'active' : ''}`}
-              onClick={() => setViewTab('active')}
-            >
-              Active ({activeCount})
-            </button>
-            <button
-              className={`tab-btn ${viewTab === 'archived' ? 'active' : ''}`}
-              onClick={() => setViewTab('archived')}
-            >
-              Archived ({archivedCount})
-            </button>
-          </div>
-
-          {/* Filter by Topic */}
-          <div className="select-wrapper">
-            <span>Topic:</span>
-            <select
-              className="custom-select"
-              value={selectedTopic}
-              onChange={(e) => setSelectedTopic(e.target.value)}
-            >
-              <option value="All">All Topics</option>
-              {topics.map((tp) => (
-                <option key={tp} value={tp}>{tp}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filter by Status */}
-          <div className="select-wrapper">
-            <span>Status:</span>
-            <select
-              className="custom-select"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-            >
-              <option value="All">All Statuses</option>
-              <option value="Todo">Todo</option>
-              <option value="In-Progress">In-Progress</option>
-              <option value="Complete">Complete</option>
-            </select>
-          </div>
+        {/* Active vs Archived View Tabs */}
+        <div className="tabs">
+          <button
+            className={`tab-btn ${viewTab === 'active' ? 'active' : ''}`}
+            onClick={() => setViewTab('active')}
+          >
+            Active ({activeCount})
+          </button>
+          <button
+            className={`tab-btn ${viewTab === 'archived' ? 'active' : ''}`}
+            onClick={() => setViewTab('archived')}
+          >
+            Archived ({archivedCount})
+          </button>
         </div>
 
-        {/* Sort Controls */}
-        <div className="filter-group">
+        {/* Due Date Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+          {/* Specific Date Filter */}
           <div className="select-wrapper">
-            <span>Sort by:</span>
-            <select
-              className="custom-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-            >
-              <option value="dueDate">Due Date</option>
-              <option value="topic">Topic</option>
-              <option value="status">Status</option>
-              <option value="createdAt">Date Created</option>
-            </select>
-
-            <button
-              className="btn-icon"
-              onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-              title={`Toggle sort direction (Current: ${sortOrder.toUpperCase()})`}
-            >
-              {sortOrder === 'asc' ? '⬆️ Asc' : '⬇️ Desc'}
-            </button>
+            <span>Date:</span>
+            <input
+              type="date"
+              className="custom-input"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              title="Filter tasks by a specific date"
+            />
+            {selectedDate && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedDate('')}
+                style={{ padding: '0.45rem 0.65rem', fontSize: '0.8rem' }}
+              >
+                Clear Date
+              </button>
+            )}
           </div>
 
-          {/* Search input */}
-          <input
-            type="text"
-            className="custom-input"
-            placeholder="🔍 Search tasks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '180px' }}
-          />
+          {/* Due Date Sorting Order */}
+          <div className="select-wrapper">
+            <span>Sort Due Date:</span>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+              title="Toggle Ascending / Descending order"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              {sortOrder === 'asc' ? '⬆️ Earliest First' : '⬇️ Latest First'}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Task Cards List */}
-      {sortedTasks.length > 0 ? (
+      {displayedTasks.length > 0 ? (
         <div className="task-grid">
-          {sortedTasks.map((task) => (
+          {displayedTasks.map((task) => (
             <TaskCard
               key={task.id}
               task={task}
@@ -232,18 +166,19 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
                 setIsModalOpen(true);
               }}
               onArchive={handleArchiveTask}
-              onStatusChange={handleStatusChange}
             />
           ))}
         </div>
       ) : (
         <div className="empty-state">
-          <div className="empty-icon">📂</div>
+          <div className="empty-icon">📅</div>
           <h3>No tasks found</h3>
           <p style={{ marginTop: '0.4rem', fontSize: '0.9rem' }}>
-            {viewTab === 'archived'
-              ? 'No archived tasks match your filters.'
-              : 'You have no active tasks. Click "Create Task" above to add one!'}
+            {selectedDate
+              ? `No ${viewTab} tasks found for ${selectedDate}.`
+              : viewTab === 'archived'
+              ? 'No archived tasks yet.'
+              : 'No active tasks. Click "Create Task" above to add one!'}
           </p>
         </div>
       )}

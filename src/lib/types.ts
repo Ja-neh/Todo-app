@@ -25,7 +25,6 @@ export interface UpdateTaskInput {
   description?: string;
   dueDate?: string;
   topic?: string;
-  status?: TaskStatus;
 }
 
 /**

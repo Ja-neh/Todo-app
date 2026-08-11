@@ -6,16 +6,15 @@ interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onArchive: (id: number) => void;
-  onStatusChange: (id: number, status: TaskStatus) => void;
 }
 
-export default function TaskCard({ task, onEdit, onArchive, onStatusChange }: TaskCardProps) {
+export default function TaskCard({ task, onEdit, onArchive }: TaskCardProps) {
   const overdue = isTaskOverdue(task);
 
   const getStatusBadgeClass = (status: TaskStatus) => {
     switch (status) {
       case 'Todo': return 'status-todo';
-      case 'In-Progress': return 'status-in-progress';
+      case 'In-Progress': return 'status-progress';
       case 'Complete': return 'status-complete';
       default: return '';
     }
@@ -29,18 +28,10 @@ export default function TaskCard({ task, onEdit, onArchive, onStatusChange }: Ta
         </h3>
         
         <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-          {/* Quick status selector */}
-          <select
-            className={`custom-select badge ${getStatusBadgeClass(task.status)}`}
-            value={task.status}
-            onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
-            disabled={task.archived}
-            style={{ cursor: task.archived ? 'not-allowed' : 'pointer' }}
-          >
-            <option value="Todo" style={{ background: '#1e293b', color: '#fbbf24' }}>Todo</option>
-            <option value="In-Progress" style={{ background: '#1e293b', color: '#60a5fa' }}>In-Progress</option>
-            <option value="Complete" style={{ background: '#1e293b', color: '#34d399' }}>Complete</option>
-          </select>
+          {/* Fixed Status Badge (Status cannot be changed/updated) */}
+          <span className={`badge ${getStatusBadgeClass(task.status)}`}>
+            {task.status}
+          </span>
         </div>
       </div>
 
