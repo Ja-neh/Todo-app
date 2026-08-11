@@ -32,17 +32,27 @@ The database consists of a single table: `tasks`.
 - Node.js v22.5.0 or higher (required for `node:sqlite` support)
 - npm v10+ (bundled with Node.js)
 
-# 1. Clone the repository
+**1. Clone the repository**
 git clone https://github.com/Ja-neh/Todo-app.git
 
-# 2. Enter the project directory
+**2. Enter the project directory**
 cd Todo-app
 
-# 3. Install dependencies
+**3. Install dependencies**
 npm install
 
-# 4. Start the development server
+**4. Start the development server**
 npm run dev
 
-# 5. For running tests
+**5. For running tests**
 npm test
+
+## AI Usage Declaration
+
+This repository makes use of AI code generation using the following tools: Antigravity IDE[Gemini 3.6 Flash (High)].
+
+This repository makes use of AI inline editing using the following tools: Antigravity IDE[Gemini 3.6 Flash (High)].
+
+This repository does not use AI code review.
+
+Full AI interaction transcripts are available in: `Transcript.md`
