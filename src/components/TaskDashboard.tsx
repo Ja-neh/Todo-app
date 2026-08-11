@@ -22,6 +22,7 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
   const [sortBy, setSortBy] = useState<'dueDate' | 'topic' | 'status'>('dueDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,8 +60,11 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
       if (viewTab === 'active' && t.archived) return false;
       if (viewTab === 'archived' && !t.archived) return false;
 
-      // Filter by specific selected date
-      if (selectedDate && t.dueDate !== selectedDate) return false;
+      // Filter by specific selected date (only when sorting by Due Date)
+      if (sortBy === 'dueDate' && selectedDate && t.dueDate !== selectedDate) return false;
+
+      // Filter by specific status (only when sorting by Status)
+      if (sortBy === 'status' && selectedStatus && t.status !== selectedStatus) return false;
 
       return true;
     })
@@ -106,7 +110,7 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
         </button>
       </header>
 
-      {/* Control Bar: View Tabs, Specific Date Filter & Sorting */}
+      {/* Control Bar: View Tabs, Sorting, and Contextual Filters */}
       <div className="controls-bar">
         {/* Active vs Archived View Tabs */}
         <div className="tabs">
@@ -125,35 +129,18 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-          {/* Specific Date Filter */}
-          <div className="select-wrapper">
-            <span>Filter Date:</span>
-            <input
-              type="date"
-              className="custom-input"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              title="Filter tasks by a specific date"
-            />
-            {selectedDate && (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setSelectedDate('')}
-                style={{ padding: '0.45rem 0.65rem', fontSize: '0.8rem' }}
-              >
-                Clear Date
-              </button>
-            )}
-          </div>
-
-          {/* Sort Controls: Topic, Status, Due Date */}
+          {/* Sort Controls: Due Date, Topic, Status */}
           <div className="select-wrapper">
             <span>Sort by:</span>
             <select
               className="custom-select"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'dueDate' | 'topic' | 'status')}
+              onChange={(e) => {
+                const newSort = e.target.value as 'dueDate' | 'topic' | 'status';
+                setSortBy(newSort);
+                if (newSort !== 'dueDate') setSelectedDate('');
+                if (newSort !== 'status') setSelectedStatus('');
+              }}
             >
               <option value="dueDate">Due Date</option>
               <option value="topic">Topic</option>
@@ -170,6 +157,57 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
               {sortOrder === 'asc' ? '⬆️ Asc' : '⬇️ Desc'}
             </button>
           </div>
+
+          {/* Specific Date Filter (Rendered ONLY when sort by Due Date is selected) */}
+          {sortBy === 'dueDate' && (
+            <div className="select-wrapper">
+              <span>Filter Date:</span>
+              <input
+                type="date"
+                className="custom-input"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                title="Filter tasks by a specific date"
+              />
+              {selectedDate && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedDate('')}
+                  style={{ padding: '0.45rem 0.65rem', fontSize: '0.8rem' }}
+                >
+                  Clear Date
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Status Selector (Rendered ONLY when sort by Status is selected) */}
+          {sortBy === 'status' && (
+            <div className="select-wrapper">
+              <span>Status:</span>
+              <select
+                className="custom-select"
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option value="Todo">Todo</option>
+                <option value="In-Progress">In-Progress</option>
+                <option value="Complete">Complete</option>
+              </select>
+              {selectedStatus && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedStatus('')}
+                  style={{ padding: '0.45rem 0.65rem', fontSize: '0.8rem' }}
+                >
+                  Clear Status
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -190,11 +228,13 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
         </div>
       ) : (
         <div className="empty-state">
-          <div className="empty-icon">📅</div>
+          <div className="empty-icon">📂</div>
           <h3>No tasks found</h3>
           <p style={{ marginTop: '0.4rem', fontSize: '0.9rem' }}>
-            {selectedDate
-              ? `No ${viewTab} tasks found for ${selectedDate}.`
+            {sortBy === 'dueDate' && selectedDate
+              ? `No ${viewTab} tasks found for date ${selectedDate}.`
+              : sortBy === 'status' && selectedStatus
+              ? `No ${viewTab} tasks found with status "${selectedStatus}".`
               : viewTab === 'archived'
               ? 'No archived tasks yet.'
               : 'No active tasks. Click "Create Task" above to add one!'}
