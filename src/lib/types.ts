@@ -40,8 +40,15 @@ export function isTaskOverdue(task: Task, referenceDate?: string): boolean {
     return false;
   }
   
-  // Use today's YYYY-MM-DD in local time if no referenceDate provided
-  const todayStr = referenceDate || new Date().toISOString().split('T')[0];
+  if (referenceDate) {
+    return task.dueDate < referenceDate;
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
   
   return task.dueDate < todayStr;
 }
