@@ -717,3 +717,174 @@ npm test
 ℹ pass 5
 ℹ fail 0
 ```
+
+### User Input
+
+I need help with the Third-Party Code section of my documentation. Do NOT edit or write any code. Only answer my questions with explanations and suggestions. Here's my question: what libraries and packages are installed in this project and why were each chosen?
+
+*Viewed [tasks.test.mjs](file:///c:/School/3rd/Sem2/SDP/Lab1/test/tasks.test.mjs) *
+
+### Planner Response
+
+Here is a breakdown of all the third-party packages, libraries, and built-in runtime modules used in this project, formatted for your **Third-Party Code** documentation section.
+
+---
+
+### 1. Production Dependencies (Runtime)
+
+| Package | Version | Purpose & Rationale for Choice |
+| :--- | :--- | :--- |
+| **`next`** | `^16.3.0` | **Full-Stack Application Framework**<br>• **App Router & Server Actions**: Enables executing database mutations (`createTaskAction`, `updateTaskAction`, `archiveTaskAction`) directly on the local server without needing a separate backend server (Express, Fastify, etc.).<br>• **Server Components**: Enables initial database reads on the server to render tasks immediately without client-side loading flashes.<br>• **Turbopack Bundler**: Provides fast compilation and local development server speeds. |
+| **`react`** | `^19.2.8` | **Component & UI Logic**<br>• Provides the declarative component model (`useState`, `useTransition`, `useEffect`) for interactive UI states (task modal forms, dynamic filtering, active/archived tabs). |
+| **`react-dom`** | `^19.2.8` | **DOM Renderer for React**<br>• Renders React components into the browser DOM and manages virtual DOM diffing. |
+
+---
+
+### 2. Built-in Node.js Engine Modules (Zero-Dependency Local Architecture)
+
+| Module | Engine Origin | Purpose & Rationale for Choice |
+| :--- | :--- | :--- |
+| **`node:sqlite`** (`DatabaseSync`) | Built into Node.js (v22.5+ / v24) | **Local-First SQLite Database Engine**<br>• **Zero Native Compilation**: Runs natively inside the Node.js runtime without requiring external C++ build tools (like `node-gyp`, Python, or Visual Studio C++ toolchains) on the user's local machine.<br>• **Synchronous SQLite Operations**: Provides fast, synchronous SQLite statements (`prepare`, `run`, `all`, `exec`) and enables WAL (`Write-Ahead Logging`) mode.<br>• **Local File Persistence**: Stores data in a local file (`todos.db`) on the user's computer with zero external database servers or cloud accounts. |
+| **`node:test`** & **`node:assert`** | Built into Node.js | **Testing Suite & Assertion Library**<br>• Provides a built-in test runner (`node --test`) for fast unit and integration tests without adding heavy external testing frameworks like Jest or Vitest.<br>• Enables running tests against an in-memory database (`:memory:`) without altering user data. |
+
+---
+
+### 3. Development & Build Tooling Dependencies
+
+| Package | Version | Purpose & Rationale for Choice |
+| :--- | :--- | :--- |
+| **`typescript`** | `^5` | **Static Type Checking**<br>• Guarantees type safety across the entire application (e.g., ensuring `TaskStatus` is strictly `'Todo' \| 'In-Progress' \| 'Complete'` and preventing invalid fields in `UpdateTaskInput`). |
+| **`@types/node`** | `^22` | **Node.js Type Definitions**<br>• Supplies TypeScript typings for Node.js standard modules (`node:sqlite`, `path`, `process`). |
+| **`@types/react`** & **`@types/react-dom`** | `^19` | **React Typings**<br>• Provides type definitions for React JSX elements, event handlers (`React.FormEvent`), and hooks. |
+| **`eslint`** & **`eslint-config-next`** | `^9` / `^16.3.0` | **Code Quality & Linting**<br>• Enforces JavaScript/TypeScript best practices, detects common bugs, and ensures Next.js conventions are followed. |
+
+---
+
+### Suggested Summary Paragraph for Your Report:
+
+> *"The project was built with a lightweight, local-first architecture prioritizing minimal external dependencies. **Next.js** and **React** serve as the core UI and server environment, handling both client interactivity and local server mutations via Server Actions. To ensure the application is completely local and runs reliably on any machine without needing C++ build dependencies, the application leverages Node.js's native **`node:sqlite`** for database persistence and **`node:test`** for in-memory automated testing. Static typing is enforced throughout the codebase using **TypeScript**."*
+
+### User Input
+
+I need help with the Database Design section of my documentation. Do NOT edit or write any code. Only answer my questions with explanations.
+
+What tables exist in the database, what columns do they have, and what are the relationships between them? Describe it in plain text suitable for documentation.
+
+*Viewed [page.tsx](file:///c:/School/3rd/Sem2/SDP/Lab1/src/app/page.tsx) *
+
+### Planner Response
+
+Here is a description of the **Database Design** suitable for your documentation report.
+
+---
+
+### Database Design
+
+The application utilizes an embedded, local-first **SQLite** database (`todos.db`) configured with Write-Ahead Logging (`WAL` mode) for fast, concurrent read and write operations.
+
+---
+
+#### 1. Tables Overview
+
+The database contains a single, self-contained table named **`tasks`**. Because this is a local-first, single-user application without user accounts or multi-tenancy, a single normalized table is used without needing foreign key relations or separate authentication tables.
+
+---
+
+#### 2. Table Schema: `tasks`
+
+| Column Name | Data Type | Constraints & Defaults | Description |
+| :--- | :--- | :--- | :--- |
+| **`id`** | `INTEGER` | `PRIMARY KEY AUTOINCREMENT` | Unique numeric identifier for each task. |
+| **`title`** | `TEXT` | `NOT NULL` | The main title or headline of the task. |
+| **`description`** | `TEXT` | `DEFAULT ''` | Optional detailed text providing additional notes or context. |
+| **`dueDate`** | `TEXT` | `NOT NULL` | The scheduled completion date stored in ISO format (`YYYY-MM-DD`). |
+| **`topic`** | `TEXT` | `NOT NULL` | The category or subject area associated with the task (e.g., *University*, *Work*, *Personal*). |
+| **`status`** | `TEXT` | `NOT NULL CHECK(status IN ('Todo', 'In-Progress', 'Complete'))` | The fixed workflow state of the task, enforced at the database level by a `CHECK` constraint. |
+| **`archived`** | `INTEGER` | `NOT NULL DEFAULT 0` | Soft-deletion flag (`0` = Active, `1` = Archived). Tasks are never permanently deleted from the database so they remain viewable and unarchivable. |
+| **`createdAt`** | `TEXT` | `NOT NULL DEFAULT (datetime('now'))` | ISO timestamp recorded automatically when the task is inserted. |
+| **`updatedAt`** | `TEXT` | `NOT NULL DEFAULT (datetime('now'))` | ISO timestamp updated whenever task details are modified. |
+
+---
+
+#### 3. Relationships
+
+- **Single-Table Design**: There are no relational foreign key dependencies.
+- **Dynamic Category Handling**: Categories/topics are stored directly in the `topic` column of each record. The application queries distinct topics (`SELECT DISTINCT topic FROM tasks`) dynamically, avoiding the need for a separate join table while supporting dynamic category creation.
+
+---
+
+#### 4. Notable Design Decisions for Documentation
+
+1. **Absence of an `overdue` Column**:
+   - The database intentionally **does not** store an `overdue` column. Overdue is a temporal state calculated dynamically at read-time by comparing the stored `dueDate` against the current local calendar date (for non-completed tasks). Storing it statically in the database would lead to stale data if time passes without database writes.
+2. **Soft-Delete / Archival Model (`archived`)**:
+   - Rather than executing SQL `DELETE` queries, tasks have their `archived` integer flag set to `1`. This preserves task history, prevents accidental permanent data loss, and enables tasks to be restored to active status at any time.
+3. **Database-Level Integrity (`CHECK` Constraint)**:
+   - The database enforces that `status` values must strictly be `'Todo'`, `'In-Progress'`, or `'Complete'`, preventing data corruption or unauthorized custom statuses.
+
+### User Input
+
+I need help with the Running Instructions section of my documentation. Do NOT edit or write any code. Only answer my questions with explanations.
+
+What is the Node.js version required for this project, and what are the exact commands a user needs to run to install, run, and test the application from a clean clone? List them in order.
+
+### Planner Response
+
+Here are the **Running Instructions** for your documentation report.
+
+---
+
+### Running Instructions
+
+#### Prerequisites & Required Node.js Version
+
+- **Node.js Version**: **Node.js v22.5.0 or higher** (e.g., Node.js 22 LTS or Node.js 24).
+  - *Reason*: The application utilizes Node.js's built-in `node:sqlite` standard module (`DatabaseSync`), which was introduced in Node.js v22.5.0. This allows the application to run an embedded SQLite database locally without requiring external C++ compilers or native build tools (like Visual Studio C++ or Python).
+- **Package Manager**: **npm** (v10+, bundled automatically with Node.js).
+
+---
+
+#### Step-by-Step Commands (From a Clean Clone)
+
+Listed in order of execution:
+
+```bash
+# 1. Clone the repository from GitHub
+git clone https://github.com/Ja-neh/Todo-app.git
+
+# 2. Navigate into the project directory
+cd Todo-app
+
+# 3. Install all project dependencies
+npm install
+
+# 4. Run the automated test suite
+npm test
+
+# 5. Start the local development server
+npm run dev
+```
+
+---
+
+#### Accessing the Application
+
+Once `npm run dev` is executed, open your browser and navigate to:
+```
+http://localhost:3000
+```
+*(The SQLite database file `todos.db` will be created automatically in the project root on first launch if it does not already exist).*
+
+---
+
+#### Optional: Building and Running in Production Mode
+
+To create an optimized local production bundle:
+
+```bash
+# Build the Next.js production bundle
+npm run build
+
+# Start the production server
+npm start
+```
