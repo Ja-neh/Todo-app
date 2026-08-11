@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Task, CreateTaskInput, UpdateTaskInput } from '@/lib/types';
+import { Task, TaskStatus, CreateTaskInput, UpdateTaskInput } from '@/lib/types';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
 import { createTaskAction, updateTaskAction, archiveTaskAction } from '@/app/actions';
@@ -18,9 +18,10 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
   // View tab: Active vs Archived
   const [viewTab, setViewTab] = useState<'active' | 'archived'>('active');
 
-  // Due Date filtering & sorting
-  const [selectedDate, setSelectedDate] = useState<string>('');
+  // Sorting & Filtering state
+  const [sortBy, setSortBy] = useState<'dueDate' | 'topic' | 'status'>('dueDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,7 +52,7 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
     await archiveTaskAction(id);
   };
 
-  // Filter and Sort by Due Date
+  // Filter and Sort Tasks
   const displayedTasks = tasks
     .filter((t) => {
       // Tab filter
@@ -64,7 +65,16 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
       return true;
     })
     .sort((a, b) => {
-      const comparison = a.dueDate.localeCompare(b.dueDate);
+      let comparison = 0;
+      if (sortBy === 'dueDate') {
+        comparison = a.dueDate.localeCompare(b.dueDate);
+      } else if (sortBy === 'topic') {
+        comparison = a.topic.localeCompare(b.topic);
+      } else if (sortBy === 'status') {
+        const statusOrder: Record<TaskStatus, number> = { 'Todo': 1, 'In-Progress': 2, 'Complete': 3 };
+        comparison = statusOrder[a.status] - statusOrder[b.status];
+      }
+
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
@@ -96,7 +106,7 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
         </button>
       </header>
 
-      {/* Control Bar: View Tabs & Due Date Controls */}
+      {/* Control Bar: View Tabs, Specific Date Filter & Sorting */}
       <div className="controls-bar">
         {/* Active vs Archived View Tabs */}
         <div className="tabs">
@@ -114,11 +124,10 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
           </button>
         </div>
 
-        {/* Due Date Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
           {/* Specific Date Filter */}
           <div className="select-wrapper">
-            <span>Date:</span>
+            <span>Filter Date:</span>
             <input
               type="date"
               className="custom-input"
@@ -138,17 +147,27 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
             )}
           </div>
 
-          {/* Due Date Sorting Order */}
+          {/* Sort Controls: Topic, Status, Due Date */}
           <div className="select-wrapper">
-            <span>Sort Due Date:</span>
+            <span>Sort by:</span>
+            <select
+              className="custom-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'dueDate' | 'topic' | 'status')}
+            >
+              <option value="dueDate">Due Date</option>
+              <option value="topic">Topic</option>
+              <option value="status">Status</option>
+            </select>
+
             <button
               type="button"
               className="btn-secondary"
               onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-              title="Toggle Ascending / Descending order"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              title={`Toggle sort order (Current: ${sortOrder === 'asc' ? 'Ascending' : 'Descending'})`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
             >
-              {sortOrder === 'asc' ? '⬆️ Earliest First' : '⬇️ Latest First'}
+              {sortOrder === 'asc' ? '⬆️ Asc' : '⬇️ Desc'}
             </button>
           </div>
         </div>
