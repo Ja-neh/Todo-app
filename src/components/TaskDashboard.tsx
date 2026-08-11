@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Task, TaskStatus, CreateTaskInput, UpdateTaskInput } from '@/lib/types';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
-import { createTaskAction, updateTaskAction, archiveTaskAction } from '@/app/actions';
+import { createTaskAction, updateTaskAction, archiveTaskAction, unarchiveTaskAction } from '@/app/actions';
 
 interface TaskDashboardProps {
   initialTasks: Task[];
@@ -51,6 +51,14 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
       prev.map((t) => (t.id === id ? { ...t, archived: true } : t))
     );
     await archiveTaskAction(id);
+  };
+
+  // Handle Unarchive Action (Restore task back to active list)
+  const handleUnarchiveTask = async (id: number) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, archived: false } : t))
+    );
+    await unarchiveTaskAction(id);
   };
 
   // Filter and Sort Tasks
@@ -223,6 +231,7 @@ export default function TaskDashboard({ initialTasks, initialTopics }: TaskDashb
                 setIsModalOpen(true);
               }}
               onArchive={handleArchiveTask}
+              onUnarchive={handleUnarchiveTask}
             />
           ))}
         </div>

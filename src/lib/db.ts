@@ -157,6 +157,16 @@ export function archiveTask(id: number): void {
   stmt.run(id);
 }
 
+export function unarchiveTask(id: number): void {
+  const db = getDb();
+  const stmt = db.prepare(`
+    UPDATE tasks
+    SET archived = 0, updatedAt = datetime('now')
+    WHERE id = ?
+  `);
+  stmt.run(id);
+}
+
 export function getAllTopics(): string[] {
   const db = getDb();
   const rows = db.prepare("SELECT DISTINCT topic FROM tasks WHERE topic IS NOT NULL AND topic != '' ORDER BY topic ASC").all() as any[];

@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createTask, updateTask, archiveTask, getTasks, getAllTopics, TaskFilterOptions } from '@/lib/db';
-import { CreateTaskInput, UpdateTaskInput, TaskStatus } from '@/lib/types';
+import { createTask, updateTask, archiveTask, unarchiveTask, getTasks, getAllTopics, TaskFilterOptions } from '@/lib/db';
+import { CreateTaskInput, UpdateTaskInput } from '@/lib/types';
 
 export async function fetchTasksAction(options?: TaskFilterOptions) {
   return getTasks(options);
@@ -56,5 +56,10 @@ export async function updateTaskAction(id: number, input: UpdateTaskInput) {
 
 export async function archiveTaskAction(id: number) {
   archiveTask(id);
+  revalidatePath('/');
+}
+
+export async function unarchiveTaskAction(id: number) {
+  unarchiveTask(id);
   revalidatePath('/');
 }

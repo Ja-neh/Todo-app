@@ -6,9 +6,10 @@ interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onArchive: (id: number) => void;
+  onUnarchive: (id: number) => void;
 }
 
-export default function TaskCard({ task, onEdit, onArchive }: TaskCardProps) {
+export default function TaskCard({ task, onEdit, onArchive, onUnarchive }: TaskCardProps) {
   const overdue = isTaskOverdue(task);
 
   const getStatusBadgeClass = (status: TaskStatus) => {
@@ -28,7 +29,7 @@ export default function TaskCard({ task, onEdit, onArchive }: TaskCardProps) {
         </h3>
         
         <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-          {/* Fixed Status Badge (Status cannot be changed/updated) */}
+          {/* Fixed Status Badge */}
           <span className={`badge ${getStatusBadgeClass(task.status)}`}>
             {task.status}
           </span>
@@ -58,20 +59,29 @@ export default function TaskCard({ task, onEdit, onArchive }: TaskCardProps) {
         </div>
 
         <div className="task-actions">
-          {!task.archived && (
-            <button className="btn-icon" onClick={() => onEdit(task)} title="Edit Task">
-              ✏️ Edit
-            </button>
-          )}
-
           {!task.archived ? (
-            <button className="btn-icon btn-archive" onClick={() => onArchive(task.id)} title="Archive Task (remains viewable)">
-              📥 Archive
-            </button>
+            <>
+              <button className="btn-icon" onClick={() => onEdit(task)} title="Edit Task">
+                ✏️ Edit
+              </button>
+              <button className="btn-icon btn-archive" onClick={() => onArchive(task.id)} title="Archive Task (remains viewable)">
+                📥 Archive
+              </button>
+            </>
           ) : (
-            <span className="badge" style={{ background: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8' }}>
-              Archived
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="badge" style={{ background: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8' }}>
+                Archived
+              </span>
+              <button
+                className="btn-icon"
+                onClick={() => onUnarchive(task.id)}
+                title="Restore / Unarchive Task"
+                style={{ color: '#34d399', borderColor: 'rgba(52, 211, 153, 0.3)' }}
+              >
+                📤 Unarchive
+              </button>
+            </div>
           )}
         </div>
       </div>
